@@ -22,7 +22,7 @@ import torch.distributed as dist
 
 from longformer.longformer import Longformer, LongformerConfig
 from longformer.sliding_chunks import pad_to_window_size
-from transformers import RobertaTokenizer, AdamW
+from transformers import BertTokenizer, AdamW
 
 from torch.utils.data.dataset import IterableDataset
 from tqdm.auto import tqdm
@@ -69,12 +69,16 @@ def calc_f1(y_pred:torch.Tensor, y_true:torch.Tensor) -> torch.Tensor:
 
 
 class ClassificationDataset(Dataset):
-
     def __init__(self, file_path, tokenizer, seqlen, num_samples=None, mask_padding_with_zero=True):
         self.data = []
         with (gzip.open(file_path, 'rt') if file_path.endswith('.gz') else open(file_path)) as fin:
             for i, line in enumerate(tqdm(fin, desc=f'loading input file {file_path.split("/")[-1]}', unit_scale=1)):
-                self.data.append(json.loads(line))
+                items = line.strip().split('SEP')
+                if len(items) != 10: continue
+                self.data.append({
+                    "text": items[0],
+                    "label": items[1]
+                })
                 if num_samples and len(self.data) > num_samples:
                     break
         self.seqlen = seqlen
@@ -93,9 +97,9 @@ class ClassificationDataset(Dataset):
     def _convert_to_tensors(self, instance):
         def tok(s):
             return self._tokenizer.tokenize(s, add_prefix_space=True)
-        tokens = [self._tokenizer.cls_token_id] + tok(instance[TEXT_FIELD_NAME]) + [self._tokenizer.sep_token]
+        tokens = [self._tokenizer.cls_token] + tok(instance[TEXT_FIELD_NAME])
         token_ids = self._tokenizer.convert_tokens_to_ids(tokens)
-        token_ids = token_ids[:self.seqlen]
+        token_ids = token_ids[:self.seqlen-1] +[self._tokenizer.sep_token_id]
         input_len = len(token_ids)
         attention_mask = [1 if self.mask_padding_with_zero else 0] * input_len
         padding_length = self.seqlen - input_len
@@ -130,7 +134,7 @@ class LongformerClassifier(pl.LightningModule):
         logger.info(f'attention mode set to {config.attention_mode}')
         self.model_config = config
         self.model = Longformer.from_pretrained(checkpoint_path, config=config)
-        self.tokenizer = RobertaTokenizer.from_pretrained(init_args.tokenizer)
+        self.tokenizer = BertTokenizer.from_pretrained(init_args.tokenizer)
         self.tokenizer.model_max_length = self.model.config.max_position_embeddings
         self.hparams = init_args
         self.hparams.seqlen = self.model.config.max_position_embeddings
@@ -140,9 +144,10 @@ class LongformerClassifier(pl.LightningModule):
         input_ids, attention_mask = pad_to_window_size(
             input_ids, attention_mask, self.model_config.attention_window[0], self.tokenizer.pad_token_id)
         attention_mask[:, 0] = 2  # global attention for the first token
-        output = self.model(input_ids, attention_mask=attention_mask)[0]
+        #use Bert inner Pooler
+        output = self.model(input_ids, attention_mask=attention_mask)[1]
         # pool the entire sequence into one vector (CLS token)
-        output = output[:, 0, :]
+        # output = output[:, 0, :]
         logits = self.classifier(output)
 
         loss = None
@@ -165,7 +170,7 @@ class LongformerClassifier(pl.LightningModule):
         is_train = split == 'train'
 
         dataset = ClassificationDataset(
-            fname, tokenizer=self.tokenizer, seqlen=self.hparams.seqlen - 2, num_samples=self.hparams.num_samples
+            fname, tokenizer=self.tokenizer, seqlen=self.hparams.seqlen, num_samples=self.hparams.num_samples
         )
 
         loader = DataLoader(dataset, batch_size=self.hparams.batch_size, num_workers=self.hparams.num_workers, shuffle=(shuffle and is_train))
@@ -295,7 +300,7 @@ def parse_args():
     parser.add_argument('--config_path', default=None, help='path to the config (if not setting dir)')
     parser.add_argument('--checkpoint_path', default=None, help='path to the model (if not setting checkpoint)')
     parser.add_argument('--attention_mode', required=True, default='sliding_chunks')
-    parser.add_argument('--tokenizer', default='roberta-base')
+    parser.add_argument('--tokenizer', default='bert')
     parser.add_argument('--train_file')
     parser.add_argument('--dev_file')
     parser.add_argument('--test_file')

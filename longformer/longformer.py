@@ -7,9 +7,10 @@ from longformer.diagonaled_mm_tvm import diagonaled_mm as diagonaled_mm_tvm, mas
 from longformer.sliding_chunks import sliding_chunks_matmul_qk, sliding_chunks_matmul_pv
 from longformer.sliding_chunks import sliding_chunks_no_overlap_matmul_qk, sliding_chunks_no_overlap_matmul_pv
 from transformers.modeling_roberta import RobertaConfig, RobertaModel, RobertaForMaskedLM
+from transformers.modeling_bert import BertConfig, BertModel, BertForMaskedLM
 
 
-class Longformer(RobertaModel):
+class Longformer(BertModel):
     def __init__(self, config):
         super(Longformer, self).__init__(config)
         if config.attention_mode == 'n2':
@@ -19,17 +20,17 @@ class Longformer(RobertaModel):
                 layer.attention.self = LongformerSelfAttention(config, layer_id=i)
 
 
-class LongformerForMaskedLM(RobertaForMaskedLM):
+class LongformerForMaskedLM(BertForMaskedLM):
     def __init__(self, config):
         super(LongformerForMaskedLM, self).__init__(config)
         if config.attention_mode == 'n2':
             pass  # do nothing, use BertSelfAttention instead
         else:
-            for i, layer in enumerate(self.roberta.encoder.layer):
+            for i, layer in enumerate(self.bert.encoder.layer):
                 layer.attention.self = LongformerSelfAttention(config, layer_id=i)
 
 
-class LongformerConfig(RobertaConfig):
+class LongformerConfig(BertConfig):
     def __init__(self, attention_window: List[int] = None, attention_dilation: List[int] = None,
                  autoregressive: bool = False, attention_mode: str = 'sliding_chunks', **kwargs):
         """
