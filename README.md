@@ -1,45 +1,16 @@
-# <p align=center>`Longformer`</p>
-`Longformer` is a BERT-like model for long documents.
+# <p align=center>`Longformer-chinese`</p>
+All work is based on `Longformer`(https://github.com/allenai/longformer)
+`Longformer-chinese` 提供了：预训练模型、在分类任务上的实现
 
-**\*\*\*\*\* New July 23rd, 2020: Speed degradation \*\*\*\*\***
-
-A significant speed degradation in the hugginface/transformers was recenlty discovered and fixed (check [this PR](https://github.com/huggingface/transformers/pull/5811) for details). To avoid this problem, either use the old [release v2.11.0](https://github.com/huggingface/transformers/tree/v2.11.0) but it doesn't support gradient checkpointing, or use the master branch. This problem should be fixed with the next hugginface/transformers release.
-
-
-**\*\*\*\*\* New June 29th, 2020: Easier to use Gradient checkpointing \*\*\*\*\***
-
-Gradient checkpointing has been released with huggingface/transformers [release v3.0.0](https://github.com/huggingface/transformers/tree/v3.0.0). Gradient checkpointing reduces memory by 5x which makes it possible to process longer sequences on smaller GPUs. To use, try something like the following:
-
-```
-from transformers import LongformerModel
-model = LongformerModel.from_pretrained('allenai/longformer-base-4096', gradient_checkpointing=True)
-```
-
-**\*\*\*\*\* New June 2nd, 2020: Integrating with Huggingface + Train your own long model + Gradient checkpointing \*\*\*\*\***
-
-1. `Longformer` is now integrated in the huggingface/transformers [release v2.11.0](https://github.com/huggingface/transformers/tree/v2.11.0). Now you can do
-```
-from transformers import LongformerModel
-model = LongformerModel.from_pretrained("allenai/longformer-base-4096")
-```
-The release also includes `LongformerForQA` and other `LongformerForTaskName` with automatic setting of global attention.
-
-2. We added a [notebook](https://colab.research.google.com/github/allenai/longformer/blob/master/scripts/convert_model_to_long.ipynb) to show how to convert an existing pretrained model into its "long" version. 
-
-3. Gradient checkpointing has been merged into HF master ([check PR](https://github.com/huggingface/transformers/pull/4659)). Gradient checkpointing can reduce memory usage significanlty (5x for `longformer-base-4096`) allowing longer sequences on smaller gpus. 
-
-
-**\*\*\*\*\* New April 27th, 2020: A PyTorch implementation of the sliding window attention  \*\*\*\*\***
-
-We added a PyTorch implementation of the sliding window attention that doesn't require the custom CUDA kernel. It is limited in functionality but more convenient to use for finetuning on downstream tasks. 
-
-**Advantage**: supports CPU, TPU and fp16, which aren't supported by the custom CUDA kernel
-
-**Limitations**: uses 2x more memory (but fp16 offsets that), and doesn’t support dilation and autoregressive attention (not needed for finetuning)
-
-therefore, it is suitable for finetuning on downstream tasks but not a good choice for language modeling. The code snippit below and the TriviaQA scripts were updated to use this new implementation.
-
-**\*\*\*\*\* End new information \*\*\*\*\***
+###WHat'S DIFFERENT
+`Longformer-chinese` 基于BERT框架进行修改，在embedding层会与原版的稍有区别。加载时使用longformer.longformer：
+    ```
+    from longformer.longformer import *
+    config = LongformerConfig.from_pretrained('schen/longformer-chinese-base-4096')
+    model = Longformer.from_pretrained('schen/longformer-chinese-base-4096', config=config)
+    ```
+ 使用'schen/longformer-chinese-base-4096'会自动从transformers下载预训练模型，也可以自行下载后替换成所在目录：
+ https://huggingface.co/schen/longformer-chinese-base-4096
 
 ### How to use
 
