@@ -6,6 +6,16 @@ All work is based on `Longformer`(https://github.com/allenai/longformer)
 
 `Longformer-chinese` 基于BERT框架进行修改，在embedding层会与原版的稍有区别。加载时使用longformer.longformer：
 
+    ```bash
+    conda create --name longformer python=3.7
+    conda activate longformer
+    conda install cudatoolkit=10.0
+    pip install git+https://github.com/allenai/longformer.git
+    ```
+
+
+
+
     ```python
     from longformer.longformer import *
     config = LongformerConfig.from_pretrained('schen/longformer-chinese-base-4096')
