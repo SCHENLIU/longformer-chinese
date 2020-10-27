@@ -13,8 +13,6 @@ config = LongformerConfig.from_pretrained('schen/longformer-chinese-base-4096')
 model = Longformer.from_pretrained('schen/longformer-chinese-base-4096', config=config)
 ```
 
-    ```python
-    ```
 
  使用`schen/longformer-chinese-base-4096`会自动从transformers下载预训练模型，也可以自行下载后替换成所在目录：
  https://huggingface.co/schen/longformer-chinese-base-4096
