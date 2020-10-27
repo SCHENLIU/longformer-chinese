@@ -3,7 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+longformer-chinese-base-4096/
+data/
+models/
+*.txt
 # Distribution / packaging
+longformer-chinese-base-4096/
 .Python
 build/
 develop-eggs/

@@ -73,11 +73,11 @@ class ClassificationDataset(Dataset):
         self.data = []
         with (gzip.open(file_path, 'rt') if file_path.endswith('.gz') else open(file_path)) as fin:
             for i, line in enumerate(tqdm(fin, desc=f'loading input file {file_path.split("/")[-1]}', unit_scale=1)):
-                items = line.strip().split('SEP')
+                items = line.strip().split('\tSEP\t')
                 if len(items) != 10: continue
                 self.data.append({
-                    "text": items[0],
-                    "label": items[1]
+                    "text": items[0]+items[1],
+                    "label": items[5]
                 })
                 if num_samples and len(self.data) > num_samples:
                     break
@@ -96,7 +96,7 @@ class ClassificationDataset(Dataset):
 
     def _convert_to_tensors(self, instance):
         def tok(s):
-            return self._tokenizer.tokenize(s, add_prefix_space=True)
+            return self._tokenizer.tokenize(s)
         tokens = [self._tokenizer.cls_token] + tok(instance[TEXT_FIELD_NAME])
         token_ids = self._tokenizer.convert_tokens_to_ids(tokens)
         token_ids = token_ids[:self.seqlen-1] +[self._tokenizer.sep_token_id]
@@ -296,11 +296,11 @@ class LongformerClassifier(pl.LightningModule):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_dir', dest='model_dir', default='longformer-base-4096/', help='path to the model')
+    parser.add_argument('--model_dir', dest='model_dir', default='longformer-chinese-base-4096/', help='path to the model')
     parser.add_argument('--config_path', default=None, help='path to the config (if not setting dir)')
     parser.add_argument('--checkpoint_path', default=None, help='path to the model (if not setting checkpoint)')
     parser.add_argument('--attention_mode', required=True, default='sliding_chunks')
-    parser.add_argument('--tokenizer', default='bert')
+    parser.add_argument('--tokenizer', default='longformer-chinese-base-4096/')
     parser.add_argument('--train_file')
     parser.add_argument('--dev_file')
     parser.add_argument('--test_file')
@@ -313,7 +313,7 @@ def parse_args():
     parser.add_argument('--test_only', default=False, action='store_true')
     parser.add_argument('--test_checkpoint', default=None)
     parser.add_argument('--test_percent_check', default=1.0, type=float)
-    parser.add_argument('--val_percent_check', default=1.0, type=float)
+    parser.add_argument('--limit_val_batches', default=1.0, type=float)
     parser.add_argument('--val_check_interval', default=1.0, type=float)
     parser.add_argument('--num_epochs', default=1, type=int)
     parser.add_argument('--do_predict', default=False, action='store_true')
@@ -357,7 +357,7 @@ def get_train_params(args):
         train_params["distributed_backend"] = None
     train_params["accumulate_grad_batches"] = args.grad_accum
     train_params['track_grad_norm'] = -1
-    train_params['val_percent_check'] = args.val_percent_check
+    train_params['limit_val_batches'] = args.limit_val_batches
     train_params['val_check_interval'] = args.val_check_interval
     train_params['gpus'] = args.gpus
     train_params['max_epochs'] = args.num_epochs
@@ -432,7 +432,7 @@ def main():
             model.hparams.dev_file = args.dev_file
             model.hparams.test_file = args.test_file
             model.hparams.train_file = args.dev_file  # the model won't get trained, pass in the dev file instead to load faster
-            trainer = pl.Trainer(gpus=1, test_percent_check=1.0, train_percent_check=0.01, val_percent_check=0.01, precision=extra_train_params['precision'])
+            trainer = pl.Trainer(gpus=1, test_percent_check=1.0, train_percent_check=0.01, limit_val_batches=0.01, precision=extra_train_params['precision'])
             trainer.test(model)
 
 if __name__ == '__main__':

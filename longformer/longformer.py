@@ -77,7 +77,8 @@ class LongformerSelfAttention(nn.Module):
 
         self.layer_id = layer_id
         self.attention_window = config.attention_window[self.layer_id]
-        self.attention_dilation = config.attention_dilation[self.layer_id]
+        # self.attention_dilation = config.attention_dilation[self.layer_id]
+        self.attention_dilation = 1
         self.attention_mode = config.attention_mode
         self.autoregressive = config.autoregressive
         assert self.attention_window > 0
