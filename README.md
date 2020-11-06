@@ -1,7 +1,7 @@
 # <p align=center>`Longformer-chinese`</p>
 All work is based on `Longformer`(https://github.com/allenai/longformer)
 
-`Longformer-chinese` 提供了：预训练模型、在分类任务上的实现
+`Longformer-chinese` 提供了：基于BERT的中文预训练模型、在分类任务上的实现
 
 ### WHAT'S DIFFERENT
 
